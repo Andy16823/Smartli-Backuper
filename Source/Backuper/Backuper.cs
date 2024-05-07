@@ -1,6 +1,8 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
@@ -454,6 +456,135 @@ namespace Backuper
                 }
             });
             return expiredPlans;
+        }
+
+        public static void ExportBackupAsync(BackupPlan plan, String backupsLocation, String destination, Action<object[]> callback, object[] args = null)
+        {
+            Task.Run(() =>
+            {
+                ExportBackup(plan, backupsLocation, destination);
+                if(callback != null)
+                {
+                    callback(args);
+                }
+            });
+        }
+
+        public static void ExportBackupSecuredAsynch(BackupPlan plan, String backupsLocation, String destination, String password, Action<object[]> callback, object[] args = null)
+        {
+            Task.Run(() =>
+            {
+                // Export the backup
+                ExportBackup(plan, backupsLocation, destination);
+
+                // Encrypt the file
+                var fileInfo = new FileInfo(destination); 
+                var encryptedFile = fileInfo.DirectoryName + "/enc_" + fileInfo.Name;
+                Cryptography.EncryptFile(destination, encryptedFile, password);
+                File.Delete(destination);
+
+                // Callback
+                if (callback != null)
+                {
+                    callback(args);
+                }
+            });
+        }
+
+        public static void ExportBackup(BackupPlan plan, String backupsLocation, String destionationFile)
+        {
+            var planDirectory = GetPlanFolder(plan, backupsLocation);
+            var destinationInfo = new FileInfo(destionationFile);
+            var destination = destinationInfo.DirectoryName;
+
+            // Create an temp working directory
+            var tmpDirectory = Path.Combine(destination, "_tmp_");
+            if(Directory.Exists(tmpDirectory))
+            {
+                DeleteDirectory(tmpDirectory);
+            }
+            Directory.CreateDirectory(tmpDirectory);
+
+            // Save the plan in the working directory
+            var planFile = Path.Combine(tmpDirectory, "plan.json");
+            var planJson = SerializePlan(plan);
+            File.WriteAllText(planFile, planJson);
+
+            // Copy the files
+            CopyDirectory(planDirectory, tmpDirectory);
+
+            // Zip the tmp directory
+            System.IO.Compression.ZipFile.CreateFromDirectory(tmpDirectory, destionationFile);
+            Directory.Delete(tmpDirectory, true);
+        }
+
+        public static void ImportFromArchiveAsync(String archiveFile, String backupsPath, BackupEventHandler callback, object[] args = null)
+        {
+            Task.Run(() =>
+            {
+                var plan = ImportFromArchive(archiveFile, backupsPath);
+                Console.WriteLine("Export Done");
+                callback(plan, args);
+            });
+        }
+
+        public static void ImportFromArchiveSecuredAsync(String archiveFile, String backupsPath, String password, BackupEventHandler callback, object[] args = null)
+        {
+            Task.Run(() =>
+            {
+                var fileInfo = new FileInfo(archiveFile);
+                String outputFile = Path.Combine(fileInfo.DirectoryName, "dec_" + fileInfo.Name);
+                var result = Cryptography.DecryptFile(archiveFile, outputFile, password);
+                if(!result)
+                {
+                    File.Delete(outputFile);
+                    callback(null, args);
+                    return;
+                }
+                var plan = ImportFromArchive(outputFile, backupsPath);
+                File.Delete(outputFile);
+                callback(plan, args);
+            });
+        }
+
+        public static BackupPlan ImportFromArchive(String archiveFile, String backupsPath)
+        {
+            var guid = Guid.NewGuid(); 
+
+            // Create an working directory
+            var tmpDirectory = Path.Combine(backupsPath, guid.ToString());
+            if(Directory.Exists(tmpDirectory))
+            {
+                DeleteDirectory(tmpDirectory);
+            }
+            Directory.CreateDirectory(tmpDirectory);
+
+            // Extract the zip
+            System.IO.Compression.ZipFile.ExtractToDirectory(archiveFile, tmpDirectory);
+
+            // Check if a plan exist
+            var planFile = Path.Combine(tmpDirectory, "plan.json");
+            if(!File.Exists(planFile))
+            {
+                DeleteDirectory(tmpDirectory);
+                return null;
+            }
+
+            // Create an new plan and an directory for the plan
+            var plan = DeserializePlan(File.ReadAllText(planFile));
+            File.Delete(planFile);
+
+            var planDirectory = Path.Combine(backupsPath, plan.Name);
+            if (Directory.Exists(planDirectory))
+            {
+                DeleteDirectory(tmpDirectory);
+                return null;
+            }
+            CopyDirectory(tmpDirectory, planDirectory);
+
+            // Delete the tmp directory
+            DeleteDirectory(tmpDirectory);
+            return plan;
         }
     }
 }
