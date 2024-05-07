@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "9+o6lkx8wOH32U7Qnwl2Rhy+QwQamcpDQ3hZG/nt5ZYY5BtNA8saUZUkQ9EgM9QDDfYlrMJDILa/h9KSjVC7qg==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\andy1\\source\\repos\\Backuper\\Backuper\\Backuper.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\andy1\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}
