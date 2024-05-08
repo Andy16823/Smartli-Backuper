@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
@@ -84,7 +85,7 @@ namespace Backuper
         {
             Task.Run(() =>
             {
-                CreateBackup(plan, location);
+                CreateBackupWithZipArchive(plan, location);
                 if (callback != null)
                 {
                     callback(args);
@@ -586,5 +587,108 @@ namespace Backuper
             DeleteDirectory(tmpDirectory);
             return plan;
         }
+
+
+        public static void CreateBackupWithZipArchive(BackupPlan plan, String location)
+        {
+            // Create an plan directory
+            var planDir = Path.Combine(location, plan.Name);
+            if(!Directory.Exists(planDir))
+            {
+                Directory.CreateDirectory(planDir);
+            }
+
+            // Create an name for the backup
+            String backupPlainName = plan.Name + "_" + DateTime.Now.Year.ToString() + DateTime.Now.Month.ToString() + DateTime.Now.Day.ToString() + DateTime.Now.Hour.ToString() + DateTime.Now.Minute.ToString() + DateTime.Now.Second.ToString();
+            String backupName = CalculateMD5Hash(backupPlainName);
+            var archiveName = Path.Combine(planDir, backupName + ".smlb");
+
+            // Check if archive exist
+            if(File.Exists(archiveName))
+            {
+                File.Delete(archiveName);
+            }
+
+            // Create Zip
+            using (var destinationStream = new FileStream(archiveName, FileMode.Create))
+            {
+                using (var zipArchiv = new ZipArchive(destinationStream, ZipArchiveMode.Create))
+                {
+                    // Add folders and files to the zip
+                    foreach (var item in plan.Sources)
+                    {
+                        if (item.Type == Type.Directory)
+                        {
+                            if (Directory.Exists(item.Path))
+                            {
+                                AddFolderToZip(zipArchiv, item.Path, "");
+                            }
+                        }
+                        else if (item.Type == Type.File)
+                        {
+                            if (File.Exists(item.Path))
+                            {
+                                AddFileToZipArchive(zipArchiv, item.Path);
+                            }
+                        }
+                    }
+
+                    // Add plan to json
+                    var planJson = SerializePlan(plan);
+                    CreateFileInArchive(zipArchiv, "plan.json", planJson);
+                }
+            }
+
+            plan.LastBackup = DateTime.Now;
+            plan.LastBackupName = backupName;
+        }
+
+
+        public static void AddFolderToZip(ZipArchive archive, string folderPath, string parentFolderName)
+        {
+            var folderName = Path.GetFileName(folderPath);
+            var folderArchiveName = Path.Combine(parentFolderName, folderName);
+
+            foreach (var file in Directory.GetFiles(folderPath))
+            {
+                var entryName = Path.Combine(folderArchiveName, Path.GetFileName(file));
+                var entry = archive.CreateEntry(entryName);
+                using (var sourceStream = new FileStream(file, FileMode.Open))
+                {
+                    using(Stream entryStream = entry.Open())
+                    {
+                        sourceStream.CopyTo(entryStream);
+                    }
+                }
+            }
+
+            foreach (var subFolder in Directory.GetDirectories(folderPath))
+            {
+                AddFolderToZip(archive, subFolder, folderArchiveName);
+            }
+        }
+
+        public static void AddFileToZipArchive(ZipArchive archive, string filePath)
+        {
+            var entryName = Path.GetFileName(filePath);
+            var entry = archive.CreateEntry(entryName);
+            using (var sourceStream = new FileStream(filePath, FileMode.Open))
+            {
+                using(Stream entryStream = entry.Open())
+                {
+                    sourceStream.CopyTo(entryStream);
+                }
+            }
+        }
+
+        public static void CreateFileInArchive(ZipArchive archive, String name, String content)
+        {
+            var entry = archive.CreateEntry(name);
+            using (var writer = new StreamWriter(entry.Open()))
+            {
+                writer.Write(content);
+            }
+        }
+
     }
 }
