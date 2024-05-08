@@ -621,14 +621,14 @@ namespace Backuper
                         {
                             if (Directory.Exists(item.Path))
                             {
-                                AddFolderToZip(zipArchiv, item.Path, "");
+                                AddFolderToZip(zipArchiv, item.Path, item.Name, "");
                             }
                         }
                         else if (item.Type == Type.File)
                         {
                             if (File.Exists(item.Path))
                             {
-                                AddFileToZipArchive(zipArchiv, item.Path);
+                                AddFileToZipArchive(zipArchiv, item.Path, item.Name);
                             }
                         }
                     }
@@ -644,9 +644,9 @@ namespace Backuper
         }
 
 
-        public static void AddFolderToZip(ZipArchive archive, string folderPath, string parentFolderName)
+        public static void AddFolderToZip(ZipArchive archive, string folderPath, string folderName, string parentFolderName)
         {
-            var folderName = Path.GetFileName(folderPath);
+            //var folderName = Path.GetFileName(folderPath);
             var folderArchiveName = Path.Combine(parentFolderName, folderName);
 
             foreach (var file in Directory.GetFiles(folderPath))
@@ -664,13 +664,13 @@ namespace Backuper
 
             foreach (var subFolder in Directory.GetDirectories(folderPath))
             {
-                AddFolderToZip(archive, subFolder, folderArchiveName);
+                AddFolderToZip(archive, subFolder, Path.GetFileName(subFolder), folderArchiveName);
             }
         }
 
-        public static void AddFileToZipArchive(ZipArchive archive, string filePath)
+        public static void AddFileToZipArchive(ZipArchive archive, string filePath, string entryName)
         {
-            var entryName = Path.GetFileName(filePath);
+            //var entryName = Path.GetFileName(filePath);
             var entry = archive.CreateEntry(entryName);
             using (var sourceStream = new FileStream(filePath, FileMode.Open))
             {
