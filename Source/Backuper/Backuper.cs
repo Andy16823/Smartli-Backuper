@@ -81,14 +81,14 @@ namespace Backuper
         /// <param name="plan">The backup plan to execute.</param>
         /// <param name="location">The location where the backup will be stored.</param>
         /// <param name="callback">Optional callback to execute after backup creation.</param>
-        public static void CreateBackupAsync(BackupPlan plan, String location, Action<object[]> callback, object[] args = null)
+        public static void CreateBackupAsync(BackupPlan plan, String location, Action<object[], bool> callback, object[] args = null)
         {
             Task.Run(() =>
             {
-                CreateBackupWithZipArchive(plan, location);
+                var result = CreateBackupWithZipArchive(plan, location);
                 if (callback != null)
                 {
-                    callback(args);
+                    callback(args, result);
                 }
             });
         }
@@ -589,7 +589,7 @@ namespace Backuper
         }
 
 
-        public static void CreateBackupWithZipArchive(BackupPlan plan, String location)
+        public static bool CreateBackupWithZipArchive(BackupPlan plan, String location)
         {
             // Create an plan directory
             var planDir = Path.Combine(location, plan.Name);
@@ -610,6 +610,19 @@ namespace Backuper
             }
 
             // Create Zip
+            if(!CreateArchive(plan, archiveName))
+            {
+                File.Delete(archiveName);
+                return false;
+            }
+
+            plan.LastBackup = DateTime.Now;
+            plan.LastBackupName = backupName;
+            return true;
+        }
+
+        public static bool CreateArchive(BackupPlan plan,  string archiveName)
+        {
             using (var destinationStream = new FileStream(archiveName, FileMode.Create))
             {
                 using (var zipArchiv = new ZipArchive(destinationStream, ZipArchiveMode.Create))
@@ -617,34 +630,40 @@ namespace Backuper
                     // Add folders and files to the zip
                     foreach (var item in plan.Sources)
                     {
+                        // Add folders to the archive
                         if (item.Type == Type.Directory)
                         {
                             if (Directory.Exists(item.Path))
                             {
-                                AddFolderToZip(zipArchiv, item.Path, item.Name, "");
+                                var result = AddFolderToZip(zipArchiv, item.Path, item.Name, "");
+                                if(result == false)
+                                {
+                                    return false;
+                                }
                             }
                         }
+                        // Add Files to the archive
                         else if (item.Type == Type.File)
                         {
                             if (File.Exists(item.Path))
                             {
-                                AddFileToZipArchive(zipArchiv, item.Path, item.Name);
+                                var result = AddFileToZipArchive(zipArchiv, item.Path, item.Name);
+                                if(result == false)
+                                {
+                                    return false;
+                                }
                             }
                         }
                     }
-
-                    // Add plan to json
                     var planJson = SerializePlan(plan);
                     CreateFileInArchive(zipArchiv, "plan.json", planJson);
                 }
             }
-
-            plan.LastBackup = DateTime.Now;
-            plan.LastBackupName = backupName;
+            return true;
         }
 
 
-        public static void AddFolderToZip(ZipArchive archive, string folderPath, string folderName, string parentFolderName)
+        public static bool AddFolderToZip(ZipArchive archive, string folderPath, string folderName, string parentFolderName)
         {
             //var folderName = Path.GetFileName(folderPath);
             var folderArchiveName = Path.Combine(parentFolderName, folderName);
@@ -652,33 +671,42 @@ namespace Backuper
             foreach (var file in Directory.GetFiles(folderPath))
             {
                 var entryName = Path.Combine(folderArchiveName, Path.GetFileName(file));
-                var entry = archive.CreateEntry(entryName);
-                using (var sourceStream = new FileStream(file, FileMode.Open))
+                var copyResult = AddFileToZipArchive(archive, file, entryName);
+                if(copyResult == false)
                 {
-                    using(Stream entryStream = entry.Open())
-                    {
-                        sourceStream.CopyTo(entryStream);
-                    }
+                    return false;
                 }
             }
 
             foreach (var subFolder in Directory.GetDirectories(folderPath))
             {
-                AddFolderToZip(archive, subFolder, Path.GetFileName(subFolder), folderArchiveName);
-            }
-        }
-
-        public static void AddFileToZipArchive(ZipArchive archive, string filePath, string entryName)
-        {
-            //var entryName = Path.GetFileName(filePath);
-            var entry = archive.CreateEntry(entryName);
-            using (var sourceStream = new FileStream(filePath, FileMode.Open))
-            {
-                using(Stream entryStream = entry.Open())
+                var copyResult = AddFolderToZip(archive, subFolder, Path.GetFileName(subFolder), folderArchiveName);
+                if(copyResult == false)
                 {
-                    sourceStream.CopyTo(entryStream);
+                    return false;
                 }
             }
+            return true;
+        }
+
+        public static bool AddFileToZipArchive(ZipArchive archive, string filePath, string entryName)
+        {
+            var entry = archive.CreateEntry(entryName);
+            try
+            {
+                using (var sourceStream = new FileStream(filePath, FileMode.Open))
+                {
+                    using (Stream entryStream = entry.Open())
+                    {
+                        sourceStream.CopyTo(entryStream);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            return true;
         }
 
         public static void CreateFileInArchive(ZipArchive archive, String name, String content)
