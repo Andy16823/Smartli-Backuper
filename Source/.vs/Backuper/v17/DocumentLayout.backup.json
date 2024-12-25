@@ -1,0 +1,105 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|c:\\users\\andy1\\source\\repos\\smartli backuper\\backuper\\backuper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|solutionrelative:backuper\\backuper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|c:\\users\\andy1\\source\\repos\\smartli backuper\\backuper\\backupplan.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|solutionrelative:backuper\\backupplan.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|c:\\users\\andy1\\source\\repos\\smartli backuper\\backuper\\backupinformation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|solutionrelative:backuper\\backupinformation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|c:\\users\\andy1\\source\\repos\\smartli backuper\\backuper\\backupsource.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|solutionrelative:backuper\\backupsource.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|c:\\users\\andy1\\source\\repos\\smartli backuper\\backuper\\cryptography.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E5DF6194-57AB-4BC5-A482-4A6564EDB96E}|Backuper\\Backuper.csproj|solutionrelative:backuper\\cryptography.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 1,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedHeight": 200,
+          "SelectedChildIndex": 5,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{dcc4ea97-1c0c-482b-b205-e541c0df9728}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "BackupInformation.cs",
+              "DocumentMoniker": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\BackupInformation.cs",
+              "RelativeDocumentMoniker": "Backuper\\BackupInformation.cs",
+              "ToolTip": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\BackupInformation.cs",
+              "RelativeToolTip": "Backuper\\BackupInformation.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-24T14:45:12.958Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Cryptography.cs",
+              "DocumentMoniker": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\Cryptography.cs",
+              "RelativeDocumentMoniker": "Backuper\\Cryptography.cs",
+              "ToolTip": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\Cryptography.cs",
+              "RelativeToolTip": "Backuper\\Cryptography.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAGAAAAAJAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-23T22:53:58.061Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "BackupSource.cs",
+              "DocumentMoniker": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\BackupSource.cs",
+              "RelativeDocumentMoniker": "Backuper\\BackupSource.cs",
+              "ToolTip": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\BackupSource.cs",
+              "RelativeToolTip": "Backuper\\BackupSource.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-23T22:53:58.148Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "BackupPlan.cs",
+              "DocumentMoniker": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\BackupPlan.cs",
+              "RelativeDocumentMoniker": "Backuper\\BackupPlan.cs",
+              "ToolTip": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\BackupPlan.cs",
+              "RelativeToolTip": "Backuper\\BackupPlan.cs",
+              "ViewState": "AgIAABwAAAAAAAAAAAAYwCIAAABnAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-23T22:53:58.15Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Backuper.cs",
+              "DocumentMoniker": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\Backuper.cs",
+              "RelativeDocumentMoniker": "Backuper\\Backuper.cs",
+              "ToolTip": "C:\\Users\\andy1\\source\\repos\\Smartli Backuper\\Backuper\\Backuper.cs",
+              "RelativeToolTip": "Backuper\\Backuper.cs",
+              "ViewState": "AgIAALUDAAAAAAAAAAAQwMoDAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-23T22:53:58.152Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

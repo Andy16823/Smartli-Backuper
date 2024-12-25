@@ -12,6 +12,15 @@ using System.Xml;
 namespace Backuper
 {
     /// <summary>
+    /// The type from the backup
+    /// </summary>
+    public enum BackupType
+    {
+        Full = 0,
+        Incremental = 1
+    }
+
+    /// <summary>
     /// Class providing methods for backup plan serialization, deserialization, and creation.
     /// </summary>
     public class Backuper
@@ -81,11 +90,11 @@ namespace Backuper
         /// <param name="plan">The backup plan to execute.</param>
         /// <param name="location">The location where the backup will be stored.</param>
         /// <param name="callback">Optional callback to execute after backup creation.</param>
-        public static void CreateBackupAsync(BackupPlan plan, String location, Action<object[], bool> callback, object[] args = null)
+        public static void CreateBackupAsync(BackupPlan plan, String location, BackupType backupType, Action<object[], bool> callback, object[] args = null)
         {
             Task.Run(() =>
             {
-                var result = CreateBackupWithZipArchive(plan, location);
+                var result = CreateBackupWithZipArchive(plan, location, backupType);
                 if (callback != null)
                 {
                     callback(args, result);
@@ -98,6 +107,7 @@ namespace Backuper
         /// </summary>
         /// <param name="plan">The backup plan to execute.</param>
         /// <param name="location">The location where the backup will be stored.</param>
+        [Obsolete("CreateBackup is deprecated, please use CreateBackupAsync instead.")]
         public static void CreateBackup(BackupPlan plan, String location)
         {
             // Create an plan directory
@@ -299,12 +309,20 @@ namespace Backuper
         /// <param name="location">The base location of backup plans.</param>
         /// <param name="destination">The destination where the backup will be extracted.</param>
         /// <param name="callback">Optional callback to execute after extraction.</param>
-        public static void ExtractBackupAsync(BackupPlan plan, String backupName, String location, String destination, Action callback)
+        public static void ExtractBackupAsync(String backupArchive, String destination, Action callback)
         {
             Task.Run(() =>
             {
-                ExtractBackup(plan, backupName, location, destination);
-                if(callback != null)
+                var restoreChain = BuildRestoreChain(backupArchive);
+                for (int i = restoreChain.Count - 1; i >= 0; i--)
+                {
+                    var archive = restoreChain[i];
+                    ExtractBackup(archive, destination);
+                    Debug.WriteLine($"Extracted archive {i}");
+                }
+                VerifyMirror(backupArchive, destination);
+
+                if (callback != null)
                 {
                     callback();
                 }
@@ -318,10 +336,80 @@ namespace Backuper
         /// <param name="backupName">The name of the backup to extract.</param>
         /// <param name="location">The base location of backup plans.</param>
         /// <param name="destination">The destination where the backup will be extracted.</param>
-        public static void ExtractBackup(BackupPlan plan, String backupName, String location, String destination)
+        public static void ExtractBackup(String backupArchive, String destination)
         {
-            var backupFile = Path.Combine(GetPlanFolder(plan, location), backupName);
-            System.IO.Compression.ZipFile.ExtractToDirectory(backupFile, destination);
+            System.IO.Compression.ZipFile.ExtractToDirectory(backupArchive, destination, true);
+        }
+
+        /// <summary>
+        /// Verifys the 
+        /// </summary>
+        /// <param name="archiveFile"></param>
+        /// <param name="targetDir"></param>
+        internal static void VerifyMirror(String archiveFile, String targetDir)
+        {
+            var backupFile = GetFileFromArchive(archiveFile, "archive.backup");
+            var backupInformation = JsonConvert.DeserializeObject<BackupInformation>(backupFile);
+
+            var files = Directory.GetFiles(targetDir);
+
+            foreach (var file in files)
+            {
+                SyncFileWithMirror(file, String.Empty, backupInformation.FileMirror);
+            }
+
+            var directories = Directory.GetDirectories(targetDir);
+            foreach(var directory in directories)
+            {
+                SyncDirectoryWithMirror(directory, String.Empty, backupInformation.FileMirror);
+            }
+
+        }
+
+        /// <summary>
+        /// Checks if the given mirrior contains the directory
+        /// </summary>
+        /// <param name="directory"></param>
+        /// <param name="startDir"></param>
+        /// <param name="mirror"></param>
+        internal static void SyncDirectoryWithMirror(String directory, String startDir, List<String> mirror)
+        {
+            var dirInfo = new DirectoryInfo(directory);
+            var dirName = dirInfo.Name;
+            var relativeDirectoryName = Path.Combine(startDir, dirName);
+            if(!mirror.Contains(relativeDirectoryName))
+            {
+                System.IO.Directory.Delete(directory, true);
+                return;
+            }
+
+            var files = Directory.GetFiles(directory);
+            foreach (var file in files)
+            {
+                SyncFileWithMirror(file, Path.Combine(startDir, dirName), mirror);
+            }
+
+            var directories = Directory.GetDirectories(directory);
+            foreach (var dir in directories)
+            {
+                SyncDirectoryWithMirror(dir, Path.Combine(startDir, dirName), mirror);
+            }
+        }
+
+        /// <summary>
+        /// Checks if the given mirror contains the file
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="targetDir"></param>
+        /// <param name="mirror"></param>
+        internal static void SyncFileWithMirror(String file, String targetDir, List<String> mirror)
+        {
+            var fileName = Path.GetFileName(file);
+            var relativeFileName = Path.Combine(targetDir, fileName);
+            if(!mirror.Contains(relativeFileName))
+            {
+                System.IO.File.Delete(file);
+            }
         }
 
         /// <summary>
@@ -333,12 +421,52 @@ namespace Backuper
         {
             Task.Run(() =>
             {
-                RestoreBackup(backupsource);
+                var restoreChain = BuildRestoreChain(backupsource);
+                for (int i = restoreChain.Count - 1; i >= 0; i--)
+                {
+                    var archive = restoreChain[i];
+                    RestoreBackup(archive);
+                    Debug.WriteLine($"Extracted archive {i}");
+                }
+                VerifyBackupIntegrity(backupsource);
+
                 if (callback != null)
                 {
                     callback();
                 }
             });
+        }
+
+        /// <summary>
+        /// Checks the backup integrity and deletes files and folders wich was not existing
+        /// at the time of the backup
+        /// </summary>
+        /// <param name="archivePath"></param>
+        internal static void VerifyBackupIntegrity(String archivePath)
+        {
+            var backupFile = GetFileFromArchive(archivePath, "archive.backup");
+            var backupInformation = JsonConvert.DeserializeObject<BackupInformation>(backupFile);
+
+            var planFile = GetFileFromArchive(archivePath, "plan.json");
+            var plan = JsonConvert.DeserializeObject<BackupPlan>(planFile);
+
+            foreach (var source in plan.Sources)
+            {
+                if (source.Type == Type.Directory)
+                {
+                    if (Directory.Exists(source.Path))
+                    {
+                        SyncDirectoryWithMirror(source.Path, "", backupInformation.FileMirror);
+                    }
+                }
+                else if (source.Type == Type.File)
+                {
+                    if (File.Exists(source.Path))
+                    {
+                        SyncFileWithMirror(source.Path, "", backupInformation.FileMirror);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -378,10 +506,6 @@ namespace Backuper
                 {
                     if (Directory.Exists(sourcefile))
                     {
-                        if(Directory.Exists(source.Path))
-                        {
-                            DeleteDirectory(source.Path);
-                        }
                         CopyDirectory(sourcefile, source.Path);
                     }
                 }
@@ -589,7 +713,7 @@ namespace Backuper
         }
 
 
-        public static bool CreateBackupWithZipArchive(BackupPlan plan, String location)
+        public static bool CreateBackupWithZipArchive(BackupPlan plan, String location, BackupType backupType)
         {
             // Create an plan directory
             var planDir = Path.Combine(location, plan.Name);
@@ -603,14 +727,25 @@ namespace Backuper
             String backupName = CalculateMD5Hash(backupPlainName);
             var archiveName = Path.Combine(planDir, backupName + ".smlb");
 
+            // Create the backup information
+            BackupInformation backupInformation = new BackupInformation()
+            {
+                PlanName = backupName,
+                PlanVersion = "1.0.1",
+                PreviousBackup = plan.LastBackupName,
+                PreviousBackupTime = plan.LastBackup,
+                BackupTime = DateTime.Now,
+                BackupType = backupType
+            };
+
             // Check if archive exist
-            if(File.Exists(archiveName))
+            if (File.Exists(archiveName))
             {
                 File.Delete(archiveName);
             }
 
             // Create Zip
-            if(!CreateArchive(plan, archiveName))
+            if(!CreateArchive(plan, archiveName, backupInformation))
             {
                 File.Delete(archiveName);
                 return false;
@@ -621,7 +756,7 @@ namespace Backuper
             return true;
         }
 
-        public static bool CreateArchive(BackupPlan plan,  string archiveName)
+        public static bool CreateArchive(BackupPlan plan, string archiveName, BackupInformation backupInformation)
         {
             using (var destinationStream = new FileStream(archiveName, FileMode.Create))
             {
@@ -635,7 +770,7 @@ namespace Backuper
                         {
                             if (Directory.Exists(item.Path))
                             {
-                                var result = AddFolderToZip(zipArchiv, item.Path, item.Name, "");
+                                var result = AddFolderToZip(zipArchiv, item.Path, item.Name, "", ref backupInformation);
                                 if(result == false)
                                 {
                                     return false;
@@ -647,7 +782,7 @@ namespace Backuper
                         {
                             if (File.Exists(item.Path))
                             {
-                                var result = AddFileToZipArchive(zipArchiv, item.Path, item.Name);
+                                var result = AddFileToZipArchive(zipArchiv, item.Path, item.Name, ref backupInformation);
                                 if(result == false)
                                 {
                                     return false;
@@ -655,24 +790,28 @@ namespace Backuper
                             }
                         }
                     }
+                    // Add the plan to the archive
                     var planJson = SerializePlan(plan);
                     CreateFileInArchive(zipArchiv, "plan.json", planJson);
+
+                    var backupInformationJson = JsonConvert.SerializeObject(backupInformation);
+                    CreateFileInArchive(zipArchiv, "archive.backup", backupInformationJson);
                 }
             }
             return true;
         }
 
-
-        public static bool AddFolderToZip(ZipArchive archive, string folderPath, string folderName, string parentFolderName)
+        public static bool AddFolderToZip(ZipArchive archive, string folderPath, string folderName, string parentFolderName, ref BackupInformation backupInformation)
         {
             //var folderName = Path.GetFileName(folderPath);
             var folderArchiveName = Path.Combine(parentFolderName, folderName);
+            backupInformation.FileMirror.Add(folderArchiveName);
 
             foreach (var file in Directory.GetFiles(folderPath))
             {
                 var entryName = Path.Combine(folderArchiveName, Path.GetFileName(file));
-                var copyResult = AddFileToZipArchive(archive, file, entryName);
-                if(copyResult == false)
+                var copyResult = AddFileToZipArchive(archive, file, entryName, ref backupInformation);
+                if (copyResult == false)
                 {
                     return false;
                 }
@@ -680,7 +819,7 @@ namespace Backuper
 
             foreach (var subFolder in Directory.GetDirectories(folderPath))
             {
-                var copyResult = AddFolderToZip(archive, subFolder, Path.GetFileName(subFolder), folderArchiveName);
+                var copyResult = AddFolderToZip(archive, subFolder, Path.GetFileName(subFolder), folderArchiveName, ref backupInformation);
                 if(copyResult == false)
                 {
                     return false;
@@ -689,22 +828,27 @@ namespace Backuper
             return true;
         }
 
-        public static bool AddFileToZipArchive(ZipArchive archive, string filePath, string entryName)
+        public static bool AddFileToZipArchive(ZipArchive archive, string filePath, string entryName, ref BackupInformation backupInformation)
         {
-            var entry = archive.CreateEntry(entryName);
-            try
+            backupInformation.FileMirror.Add(entryName);
+
+            if (IncludeFile(filePath, backupInformation))
             {
-                using (var sourceStream = new FileStream(filePath, FileMode.Open))
+                var entry = archive.CreateEntry(entryName);
+                try
                 {
-                    using (Stream entryStream = entry.Open())
+                    using (var sourceStream = new FileStream(filePath, FileMode.Open))
                     {
-                        sourceStream.CopyTo(entryStream);
+                        using (Stream entryStream = entry.Open())
+                        {
+                            sourceStream.CopyTo(entryStream);
+                        }
                     }
                 }
-            }
-            catch (Exception)
-            {
-                return false;
+                catch (Exception)
+                {
+                    return false;
+                }
             }
             return true;
         }
@@ -716,6 +860,118 @@ namespace Backuper
             {
                 writer.Write(content);
             }
+        }
+
+        public static bool IncludeFile(String file, BackupInformation backupInformation)
+        {
+            if(backupInformation.BackupType == BackupType.Incremental)
+            {
+                var fileInfo = new FileInfo(file);
+                return fileInfo.LastWriteTime > backupInformation.PreviousBackupTime;
+            }
+            return true;
+        }
+
+        public static BackupInformation GetBackupInformationFromArchive(string archiveFile)
+        {
+            var backupInfoStr = GetFileFromArchive(archiveFile, "archive.backup");
+            return JsonConvert.DeserializeObject<BackupInformation>(backupInfoStr);
+        }
+
+        public static String GetFileFromArchive(string archiveFile, String fileName)
+        {
+            using (ZipArchive archive = ZipFile.OpenRead(archiveFile))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    if (entry.Name.Equals(fileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        using (StreamReader reader = new StreamReader(entry.Open()))
+                        {
+                            string content = reader.ReadToEnd();
+                            return content;
+
+                        }
+                    }
+                }
+            }
+            return String.Empty;
+        }
+
+        public static bool CanBackupGetRestored(String archiveFile)
+        {
+            var backupFile = GetFileFromArchive(archiveFile, "archive.backup");
+            var planFile = GetFileFromArchive(archiveFile, "plan.json");
+            if (!String.IsNullOrEmpty(backupFile) && !String.IsNullOrEmpty(planFile))
+            {
+                var backupInformation = JsonConvert.DeserializeObject<BackupInformation>(backupFile);
+                if(backupInformation.BackupType == BackupType.Incremental)
+                {
+                    var basepath = Path.GetDirectoryName(archiveFile);
+                    var dependencyFile = Path.Combine(basepath, backupInformation.PreviousBackup + ".smlb");
+                    if(File.Exists(dependencyFile))
+                    {
+                        return CanBackupGetRestored(dependencyFile);
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            else {
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Builds the Restore chain for a given backup archive.
+        /// </summary>
+        /// <param name="archiveFile"></param>
+        /// <returns></returns>
+        public static List<String> BuildRestoreChain(String archiveFile)
+        {
+            var basepath = Path.GetDirectoryName(archiveFile);
+            List<String> result = new List<String>();
+            if(CanBackupGetRestored(archiveFile))
+            {
+                result.Add(archiveFile);
+
+                var backupFile = GetFileFromArchive(archiveFile, "archive.backup");
+                var backupInformation = JsonConvert.DeserializeObject<BackupInformation>(backupFile);
+                if(backupInformation.BackupType == BackupType.Incremental)
+                {
+                    var dependencyFile = Path.Combine(basepath, backupInformation.PreviousBackup + ".smlb");
+                    GetDependency(dependencyFile, basepath, ref result);
+                }
+            }
+            return result;
+        }
+
+        public static void GetDependency(String archiveFile, String basepath, ref List<String> dependencys)
+        {
+            dependencys.Add(archiveFile);
+            var backupFile = GetFileFromArchive(archiveFile, "archive.backup");
+            var backupInformation = JsonConvert.DeserializeObject<BackupInformation>(backupFile);
+
+            if(backupInformation.BackupType == BackupType.Incremental)
+            {
+                var dependencyFile = Path.Combine(basepath, backupInformation.PreviousBackup + ".smlb");
+                GetDependency(dependencyFile, basepath, ref dependencys);
+            }
+        }
+
+        public static bool ContainsSource(BackupPlan backupPlan, String name)
+        {
+            foreach (var source in backupPlan.Sources)
+            {
+                if(source.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
     }

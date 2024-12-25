@@ -11,3 +11,16 @@ C:\Users\andy1\source\repos\Backuper\Backuper\obj\Release\net8.0\refint\Backuper
 C:\Users\andy1\source\repos\Backuper\Backuper\obj\Release\net8.0\Backuper.pdb
 C:\Users\andy1\source\repos\Backuper\Backuper\obj\Release\net8.0\ref\Backuper.dll
 C:\Users\andy1\source\repos\Backuper\Backuper\bin\Release\net8.0\Legal\Newtonsoft.Json.txt
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\bin\Release\net8.0\Legal\Newtonsoft.Json.txt
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\bin\Release\net8.0\Backuper.deps.json
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\bin\Release\net8.0\Backuper.dll
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\bin\Release\net8.0\Backuper.pdb
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\obj\Release\net8.0\Backuper.csproj.AssemblyReference.cache
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\obj\Release\net8.0\Backuper.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\obj\Release\net8.0\Backuper.AssemblyInfoInputs.cache
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\obj\Release\net8.0\Backuper.AssemblyInfo.cs
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\obj\Release\net8.0\Backuper.csproj.CoreCompileInputs.cache
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\obj\Release\net8.0\Backuper.dll
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\obj\Release\net8.0\refint\Backuper.dll
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\obj\Release\net8.0\Backuper.pdb
+C:\Users\andy1\source\repos\Smartli Backuper\Backuper\obj\Release\net8.0\ref\Backuper.dll
